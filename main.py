@@ -9,9 +9,11 @@ if __name__ == '__main__':
         print("Run with debug: ./main.py <port> DEBUG")
         sys.exit(1)
 
+    print("##### Running Server #####")
     port = int(sys.argv[1])
     server = Server()
-    if len(sys.argv == 3) and sys.argv[2] == "DEBUG":
+    if len(sys.argv) == 3 and sys.argv[2] == "DEBUG":
         server.debug = True
+        print("###     WITH  DEBUG    ###")
     reactor.listenUDP(port, server)
     reactor.run()
