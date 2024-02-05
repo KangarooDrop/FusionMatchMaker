@@ -194,16 +194,12 @@ class Server(DatagramProtocol):
                 self.log("ERROR: Duplicate user found")
                 self.sendMessage(address, CLIENT_ERR_USER_IN_LOBBY)
                 raise Exception
-            lobby = Lobby(lobbyName, numPlayers, user)
-            if lobby != None:
+            
+            if self.getLobby(lobbyName) != None:
                 self.log("ERROR: Duplicate lobby found")
                 self.sendMessage(address, CLIENT_ERR_LOBBY_NAME_TAKEN)
                 raise Exception
-            
-            if lobby.isUsernameTaken(username):
-                self.log("ERROR: Username in use")
-                self.sendMessage(address, CLIENT_ERR_USERNAME_TAKEN)
-                raise Exception
+            lobby = Lobby(lobbyName, numPlayers, user)
             
             self.activeLobbies.append(lobby)
             self.log("Created lobby: " + str(lobby))
@@ -224,6 +220,11 @@ class Server(DatagramProtocol):
             if lobby == None:
                 self.log("ERROR:  Join lobby not found")
                 self.sendMessage(address, CLIENT_ERR_NO_LOBBY_FOUND)
+                raise Exception
+            
+            if lobby.isUsernameTaken(username):
+                self.log("ERROR: Username in use")
+                self.sendMessage(address, CLIENT_ERR_USERNAME_TAKEN)
                 raise Exception
             
             user = User(username, ip, port)
@@ -285,8 +286,7 @@ class Server(DatagramProtocol):
                 raise Exception
             
             for user in chatLobby.users:
-                if user != chatUser:
-                    self.sendMessage(address, CLIENT_INFO_CHAT + DEL_HANDLER + message)
+                self.sendMessage(address, CLIENT_INFO_CHAT + DEL_HANDLER + chatUser.username + ": " + message)
             
         except Exception as e:
             raise e

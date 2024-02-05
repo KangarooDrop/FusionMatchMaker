@@ -60,7 +60,7 @@ class Lobby:
         if user != None:
             self.bannedUserAddresses.append((user.ip, user.port))
     
-    def isUsernameTaken(self, username : String) -> bool:
+    def isUsernameTaken(self, username : string) -> bool:
         for user in self.users:
             if user.username == username:
                 return True
