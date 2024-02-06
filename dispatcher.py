@@ -8,10 +8,10 @@ def getFreePort() -> int:
     port = serverSocket.getsockname()[1]
     return port
 
-def dispatch(userData) -> int:
+def dispatch(userData, debug = False) -> int:
     port = getFreePort()
-    path = "exe/FusionServer.console.exe"
-    args = ""
+    path = "exe/FusionServer.exe"
+    args = " --headless"
     args += " -p " + str(port)
     for ud in userData:
         args += " -c " + ud
@@ -19,6 +19,9 @@ def dispatch(userData) -> int:
     lineArgs = (path + args).split(" ")
     print("Dispatching a server for " + str(userData) + "\n\t" + str(lineArgs))
     
-    process = subprocess.Popen(lineArgs)
+    if debug:
+        process = subprocess.Popen(lineArgs)
+    else:
+        process = subprocess.Popen(lineArgs, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     return port
 
