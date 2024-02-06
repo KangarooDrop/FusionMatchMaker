@@ -1,3 +1,4 @@
+
 import time
 import string
 from typing import List, Dict, Tuple
@@ -81,11 +82,13 @@ class Lobby:
         return True
     
     def removeUser(self, userToRemove : User):
+        rehost = self.isHost(userToRemove)
         self.users.remove(userToRemove)
-        if len(self.users) > 0:
-            self.host = self.players_array[0]
-        else:
-            self.host = None
+        if rehost:
+            if len(self.users) > 0:
+                self.host = self.users[0]
+            else:
+                self.host = None
     
     
     

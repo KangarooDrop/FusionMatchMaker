@@ -10,11 +10,13 @@ import re
 import string
 from lobby import Lobby
 from user import User
+import dispatcher
 
 SECONDS_BETWEEN_TRIES: float = 0.05
 CLEANUP_SECONDS: float = 8
 CONFIRMATION_RETRIES: int = 8
 SECONDS_BETWEEN_CONFIRMATION_RETRIES: float = 0.1
+PING_SECONDS = 1.0
 
 MAX_PLAYERS : int = 8
 
@@ -88,8 +90,7 @@ class Server(DatagramProtocol):
 
     def __init__(self):
         self.debug = False
-        self.activeLobbies : Dictionary = []
-        self.dispatchedLobbies : Dictionary = []
+        self.activeLobbies  = []
         self.handlers = \
         {
             KEY_HOST_LOBBY :    self.hostLobby,
@@ -104,6 +105,7 @@ class Server(DatagramProtocol):
             KEY_EXIT :          self.playerExit
         }
         reactor.callLater(CLEANUP_SECONDS, self.cleanup)
+        reactor.callLater(PING_SECONDS, self.pingUsers)
 
     def datagramReceived(self, data, address):
         dataString = data.decode("utf-8")
@@ -131,6 +133,12 @@ class Server(DatagramProtocol):
             print(message)
     
 ###################################################################################################
+    
+    def pingUsers(self):
+        for lobby in self.activeLobbies:
+            for user in lobby.users:
+                self.sendMessage((user.ip, user.port), CLIENT_INFO_PING)
+        reactor.callLater(PING_SECONDS, self.pingUsers)
     
     def cleanup(self):
         print("Cleaning up... Active Lobbies: " + str(len(self.activeLobbies)))
@@ -171,10 +179,13 @@ class Server(DatagramProtocol):
             self.log("Uncontrolled error: " + str(e))
     
     def removeUserFromLobby(self, lobby : Lobby, user : User):
+        self.sendChat(lobby, user.username + " has left the lobby.")
         host = lobby.host
         lobby.removeUser(user)
         if not lobby.isHost(host) and lobby.host != None:
             self.sendMessage((lobby.host.ip, lobby.host.port), CLIENT_INFO_SET_HOST)
+            self.sendChat(lobby, lobby.host.username + " is the new host.")
+        self.updateLobbyInfo(lobby)
     
 ###################################################################################################
 
@@ -205,6 +216,7 @@ class Server(DatagramProtocol):
             self.log("Created lobby: " + str(lobby))
             
             self.sendMessage(address, CLIENT_SUCC_HOST_LOBBY)
+            self.sendChat(lobby, username + " started hosting the lobby.")
             self.updateLobbyInfo(lobby)
             
         except Exception as e:
@@ -241,6 +253,7 @@ class Server(DatagramProtocol):
             self.log(str(user) + " successfully joined " + str(lobby))
             lobby.addUser(user)
             self.sendMessage(address, CLIENT_SUCC_JOIN_LOBBY)
+            self.sendChat(lobby, username + " has joined the lobby.")
             self.updateLobbyInfo(lobby)
             
             
@@ -285,11 +298,14 @@ class Server(DatagramProtocol):
                 self.sendMessage(address, CLIENT_ERR_NOT_IN_LOBBY)
                 raise Exception
             
-            for user in chatLobby.users:
-                self.sendMessage(address, CLIENT_INFO_CHAT + DEL_HANDLER + chatUser.username + ": " + message)
+            self.sendChat(chatLobby, chatUser.username + ": " + message)
             
         except Exception as e:
             raise e
+    
+    def sendChat(self, chatLobby : Lobby, chatMessage : string):
+        for user in chatLobby.users:
+            self.sendMessage((user.ip, user.port), CLIENT_INFO_CHAT + DEL_HANDLER + chatMessage)
     
     def startGame(self, address : Tuple, message : string):
         self.log("Receive request to start game: " + message)
@@ -311,8 +327,11 @@ class Server(DatagramProtocol):
                 self.sendMessage(address, CLIENT_ERR_USERS_NOT_READY)
                 raise Exception
             
-            #TODO Dispatch game for players
-            self.sendMessage(address, CLIENT_SUCC_START_GAME)
+            userData = [user.ip + ":" + str(user.port) for user in startLobby.users]
+            dispatchPort : int = dispatcher.dispatch(len(startLobby.users), userData)
+            for user in startLobby.users:
+                self.sendMessage((user.ip, user.port), CLIENT_SUCC_START_GAME + DEL_HANDLER + str(dispatchPort))
+            self.activeLobbies.remove(startLobby)
             
         except Exception as e:
             raise e
