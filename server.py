@@ -1,3 +1,11 @@
+
+#TODO:
+#  lobby settings
+#  adjusting lobby size
+#  public lobbies
+#  run server as headless
+#  server output only when self.debug==True
+
 from typing import Tuple
 
 from twisted.internet import reactor
@@ -328,7 +336,7 @@ class Server(DatagramProtocol):
                 raise Exception
             
             userData = [user.ip + ":" + str(user.port) for user in startLobby.users]
-            dispatchPort : int = dispatcher.dispatch(len(startLobby.users), userData)
+            dispatchPort : int = dispatcher.dispatch(userData)
             for user in startLobby.users:
                 self.sendMessage((user.ip, user.port), CLIENT_SUCC_START_GAME + DEL_HANDLER + str(dispatchPort))
             self.activeLobbies.remove(startLobby)

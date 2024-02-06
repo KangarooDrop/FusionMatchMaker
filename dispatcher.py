@@ -8,12 +8,11 @@ def getFreePort() -> int:
     port = serverSocket.getsockname()[1]
     return port
 
-def dispatch(numPlayers : int, userData) -> int:
+def dispatch(userData) -> int:
     port = getFreePort()
     path = "exe/FusionServer.console.exe"
     args = ""
     args += " -p " + str(port)
-    args += " -n " + str(numPlayers) 
     for ud in userData:
         args += " -c " + ud
 
